@@ -1,68 +1,104 @@
-// I'm trying to get into the habit of actually commenting up my code so I can actually remember what it does, lets see if I stick with that ;-;
+// Assign pins:
 
-//determines the direction of the motor (CW or CCW)
-const int dirPin = 4;
+// Pan stepper motor (base rotation):
+const int pan_stepper_dir = 4;
+const int pan_stepper_step = 3;
 
-//for every pulse of a signal sent through this pin, one step is made by the motor
-const int stepPin = 3;
+// Tilt stepper motor (up/down barrel control):
+const int tilt_stepper_dir = 6;
+const int tilt_stepper_step = 5;
 
-//the number used in the motorTurn function that is created in line ___
-const int stepsPerRevolution = 200;
 
-// I have no idea what the line below was for, I am keeping it as decoration now.
-// const int logicPower = 6;
+//generic steps per revolution (used for both motors):
+const int stepsPerRevolution = 100; 
 
+const int stepDelay = 10; //delay in a step in miliseconds 
+
+//joystick pins to be added here:
+const int x_stick = A0;
+const int y_stick = A1;
+const int button_stick = 7;
+
+// pin to activate solenoid MOSFET
+const int solenoid_pin = 8;
+
+//custom functions 
+
+void motorStep (int stepName, int stepCount, int dir) {
+  
+  // sending signals to the stepper motor of choice
+  if (stepName == 0) {
+    digitalWrite(pan_stepper_dir, dir);
+    for (int i = 0; i < stepCount; i++) {
+      digitalWrite(pan_stepper_step, HIGH);
+      delay(stepDelay);
+      digitalWrite(pan_stepper_step, LOW);
+      delay(stepDelay);
+    }
+  } else {
+    digitalWrite(tilt_stepper_dir, dir);
+    for (int i = 0; i < stepCount; i++) {
+      digitalWrite(tilt_stepper_step, HIGH);
+      delay(stepDelay);
+      digitalWrite(tilt_stepper_step, LOW);
+      delay(stepDelay);
+    }
+  }
+}
 
 void setup() {
+  // make the pins actually work !!
   Serial.begin(9600);
-  pinMode(stepPin, OUTPUT);
-  pinMode(dirPin, OUTPUT);
+  pinMode(pan_stepper_dir, OUTPUT);
+  pinMode(pan_stepper_step, OUTPUT);
+  pinMode(tilt_stepper_dir, OUTPUT);
+  pinMode(tilt_stepper_step, OUTPUT);
 
-/*
-Below lies the relic of past failures. This was the old version of the motorTurn function
+  pinMode(x_stick, INPUT);
+  pinMode(y_stick, INPUT);
+  pinMode(button_stick, INPUT);
 
-  pinMode(logicPower, OUTPUT);
-  analogWrite(logicPower, 153);
-  void spin (int count, int dir, int del) {
-    digitalWrite(dirPin, dir);
-    for (int i = 0; i < count; i++) {
-      analogWrite(stepPin, customHIGH);
-      delayMicroseconds(del);
-      digitalWrite(stepPin, LOW);
-      delayMicroseconds(del);
-      }
-    }
-*/
-
-  
   pinMode(LED_BUILTIN, OUTPUT);
-
-/*
-This is where I found out that Arduino's IOT dashboard app only works with certain boards. 
-It doesn't work with the UNO R3, which is what I am using. I'm not sure if I'm going to buy
-a different board, or if there is a way I can create a local dashboard. 
-
-I also want to integrate computer vision, so I dont know how that factors in quite yet. 
-*/
+}
 
 void loop() {
-
-  //Code below is just a little blinking action to see if my board is actually connected 
-    digitalWrite(LED_BUILTIN, HIGH);  
-  delay(500);                     
-  digitalWrite(LED_BUILTIN, LOW);   
-  delay(500); 
+  // Joystick movement interpretation
+  /* 
+  later these joystick movements can probably just be included in the connection with 
+  the python script that will include the tag tracking
   
-  // Setting the motor direction to be clockwise
-  digitalWrite(dirPin, HIGH);
+  */
 
+  if (analogRead(x_stick) > 520) {
+    // joystick is pointing to the right
+    motorStep(0, 10, 0);
+  }
+  if (analogRead(x_stick) < 500) {
+    //joystick is pointing to the left
+    motorStep(0, 10, 1);
+  }
+  if (analogRead(y_stick) > 520) {
+    // joystick is pointing down
+    motorStep(1, 10, 0);
+  }
+  if (analogRead(y_stick) < 500) {
+    //joystick is pointing up
+    motorStep(1, 10, 1);
+  }
 
-  
-    for (int i = 0; i < stepsPerRevolution; i++) {
-      digitalWrite(stepPin, HIGH);
-      delay(10);
-      digitalWrite(stepPin, LOW);
+  if(digitalRead(button_stick) == 1){
+    digitalWrite(solenoid_pin, HIGH);
+    delay(5);
+    digitalWrite(solenoid_pin, LOW);
+    delay(1000);
+    Serial.println("solenoid activated");
+  }
 
-      Serial.println("running");
-      }
 }
+
+/*
+At this point I'm thinking of switching to using a raspberry pi instead.
+I'm unsure of how to use april tags and arduino together (if that can even work ;-;)
+I think I'm just gonna go the well-documented route of PhotonVision + RPi to save myself 
+a bit of sanity lol
+*/
